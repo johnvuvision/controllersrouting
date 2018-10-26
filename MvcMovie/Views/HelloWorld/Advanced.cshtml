@@ -1,0 +1,26 @@
+@{
+    ViewData["Title"] = "Advanced";
+    var message = ViewData["Message"];
+    var numTimes = ViewData["NumTimes"];
+    var id = ViewData["ID"];
+    var currentTime = ViewData["CurrentTime"]; 
+    var currentUrl = ViewData["CurrentUrl"]; 
+    var currentUrlAbs = ViewData["CurrentUrlAbs"];     
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<p>This is the Advanced template, it contains some test concepts!</p>
+
+
+<p>Message: @message</p>
+<p>ID: @id</p>
+<p>Number of Times: @numTimes</p>
+<ul>
+    @for (int i = 0; i < (int)numTimes; i++) {
+        <li>@message</li>
+    }
+</ul>
+<p>Current Time (using simple service to demo dependency injection): @currentTime</p>
+<p>Current Url (from Url.Action URL generator): @currentUrl</p>
+<p>Current URL Absolute (from Url.Action URL generator): @currentUrlAbs</p>

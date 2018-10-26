@@ -1,0 +1,236 @@
+Outline
+I. Controllers and Routing: a crucial part of MVC
+	A. Modern Web development world: rich front-end UI libraries, mobile, distributed services
+	B. Web Forms (attempt to unify Windows and Web dev, heavy) vs. MVC (light, made for modern Web, centered on HTTP request and response)
+	C. Better URLs: do not need to map a file, long URLs and file extensions can be eliminated, friendly URLs, SEO
+	D. Flexibility, less code : defaults, scaffolding.
+II. Simple routing 
+	A. Definition: Routing middleware
+	B. Default route, conventional, dedicated conventional routes
+	C. Attributes, constraints
+III. Advanced routing
+	A. Tokens and Inheritance
+	B. Dependency Injection
+	C. Unit testing for routes
+IV. How to demo for yourself
+	A. https://docs.microsoft.com/en-us/aspnet/core/tutorials/first-mvc-app-xplat/?view=aspnetcore-2.1
+	B. Questions
+
+
+
+Controllers and Routing are fundamental aspects of ASP.NET Core MVC that allow the framework to provide a scaffold for rapid application development using less code. They represent a different approach from script files and Web Forms in that they emphasize the programmatic handling of HTTP requests and responses rather than physical file paths. Routing also allows better URLs for services and for SEO: friendly and descriptive, no mapping to files, and removal of file extensions.
+
+ASP.NET Core MVC uses the Routing middleware to match the URLs of incoming requests and map them to actions contained in controllers. Routes are defined in startup code or attributes. Routes describe how URL paths should be matched to actions. Routes are also used to generate URLs (for links) sent out in responses.
+
+Routes: Here we have the default route:
+
+            app.UseMvc(routes =>
+            {        
+                routes.MapRoute(
+                    name: "default",
+                    template: "{controller=Home}/{action=Index}/{id?}");
+            });
+
+It is an example of a conventional route, "conventional" because it establishes a convention:
+	the first path segment maps to the controller name
+	the second maps to the action name.
+	the third segment is used for an optional id used to map to a model entity
+
+We can add multiple routes using more MapRoute calls. If routes overlap, routes are tried before a match is made, this is called Fallback. When two actions match, MVC must decide the best match. AmbiguousActionException is thrown when a best match can't be determined.
+
+            app.UseMvc(routes =>
+            {
+                //New Route : Extended
+                routes.MapRoute(
+	                name: "extended-route",
+        	        template: "extended",
+                	defaults: new { controller = "Home", action = "Extended" }
+                	);           
+
+                routes.MapRoute(
+                	name: "default",
+                	template: "{controller=Home}/{action=Index}/{id?}"
+			);
+            });
+
+Controllers: This is the simple controller called HomeController. Notice how the name matches the URL.
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using MvcMovie.Models;
+
+namespace MvcMovie.Controllers
+{
+    public class HomeController : Controller
+    {
+        public IActionResult Index()
+        {
+            return View();
+        }
+
+        public IActionResult About()
+        {
+            ViewData["Message"] = "Your application description page.";
+
+            return View();
+        }
+
+        public IActionResult Contact()
+        {
+            ViewData["Message"] = "Your contact page.";
+
+            return View();
+        }
+
+        public IActionResult Privacy()
+        {
+            return View();
+        }
+
+        public string Extended()
+        {
+            return "We can return a string instead of a view.";
+        }        
+
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+    }
+}
+
+Attributes: We can use these to map actions directly, it's another way to do that. Attributes can also be Http[Verb], they are matched based on the kind of HTTP verb used in the request. Typically attribute direct mapping is done for REST APIs while conventional routing are more commonly used to serve Web pages.
+
+//
+public class MyDemoController : Controller
+{
+   [Route("")]
+   [Route("Home")]
+   [Route("Home/Index")] //NOTE the multiple routes here that match one action
+   public IActionResult MyIndex()
+   {
+      return View("Index");
+   }
+   [Route("Home/About")]
+   public IActionResult MyAbout()
+   {
+      return View("About");
+   }
+   [Route("Home/Contact")]
+   public IActionResult MyContact()
+   {
+      return View("Contact");
+   }
+}
+
+
+
+[HttpPost("/products")]
+public IActionResult CreateProduct(...)
+{
+   // this only runs if it's a POST!
+}
+
+
+Named routes: We can apply a name to the route, this really is only used to refer to it later for URL generation.
+
+public class ProductsApiController : Controller
+{
+   [HttpGet("/products/{id}", Name = "Products_List")]
+   public IActionResult GetProduct(int id) { ... }
+}
+
+
+Token replacement : We can create attributes using bracket-enclosed tokens, The tokens [action], [area], and [controller] are replaced with the values of the action name, area name, and controller name from the action where the route is defined.
+
+[Route("[controller]/[action]")]
+public class ProductsController : Controller
+{
+    [HttpGet] // Matches '/Products/List'
+    public IActionResult List() {
+        // ...
+    }
+
+    [HttpGet("{id}")] // Matches '/Products/Edit/{id}'
+    public IActionResult Edit(int id) {
+        // ...
+    }
+}
+
+Inheritance: Controllers are classes and thus can be inherited, note the use of tokens:
+
+[Route("api/[controller]")]
+public abstract class MyBaseController : Controller { ... }
+
+public class ProductsController : MyBaseController
+{
+   [HttpGet] // Matches '/api/Products'
+   public IActionResult List() { ... }
+
+   [HttpPut("{id}")] // Matches '/api/Products/{id}'
+   public IActionResult Edit(int id) { ... }
+}
+
+
+
+
+
+--Dependency Injection
+
+using System;
+namespace ControllerDI.Interfaces {
+    public interface IDateTime {
+        DateTime Now { get; }
+    }
+}
+
+
+using System;
+using ControllerDI.Interfaces;
+namespace MvcMovie {
+    public class SystemDateTime : IDateTime {
+        public DateTime Now {
+            get { return DateTime.Now; }
+        }
+    }
+}
+
+
+
+URL Generation
+
+
+
+As you can see, routing is powerful but it must be done carefully so that requests yield the expected results. As you can see above, it's easy to write routes that overlap or where a match is ambiguous. For complex routing, it's a best practice to use unit testing to make sure routes work.
+
+
+
+
+Testing URLS:
+
+https://localhost:5001/home/about
+https://localhost:5001/home/extended
+https://localhost:5001/TestGet
+https://localhost:5001/TestPost
+https://localhost:5001/helloworld/advanced/5?name=vic&numtimes=15
+https://localhost:5001/api/helloworldapi
+
+https://localhost:5001/
+https://localhost:5001/home/about
+https://localhost:5001/home/extended
+https://localhost:5001/helloworld/
+
+
+Bibliography
+https://docs.microsoft.com/en-us/aspnet/core/tutorials/first-mvc-app-xplat/?view=aspnetcore-2.1
+https://docs.microsoft.com/en-us/aspnet/core/fundamentals/routing?view=aspnetcore-2.1
+best and most concise: https://docs.microsoft.com/en-us/aspnet/core/mvc/controllers/routing?view=aspnetcore-2.1
+https://docs.microsoft.com/en-us/aspnet/core/mvc/controllers/dependency-injection?view=aspnetcore-2.1
+https://github.com/aspnet/Docs/tree/master/aspnetcore/mvc/controllers/dependency-injection/
+https://github.com/Granicus/vi-visionlive
+https://stormpath.com/blog/routing-in-asp-net-core
